@@ -1,91 +1,100 @@
 const express = require('express');
-const router = express.Router();
-const mongoose = require('mongoose');
+
 const Order = require('../models/order');
-const CartItem = require('../models/cartItem');
-const UserAddress = require('../models/userAddress');
+const Product = require('../models/product');
+const User = require('../models/user');
+const authenticate = require('../middleware/authenticate');
 
-router.post('/create', (req, res, next) => {
-    const order = new Order({
-        _id: new mongoose.Types.ObjectId(),
-        user: req.body.user,
-        order: req.body.order,
-        address: req.body.address,
-        paymentType: req.body.paymentType,
-        paymentStatus: req.body.paymentStatus
-    });
+const { v4: uuidV4 } = require('uuid');
 
-    order.save()
-    .then(order => {
-
-        CartItem.remove({"user": req.body.user})
-        .exec()
-        .then(doc => {
-            res.status(201).json({
-                message: order
-            });
-        })
-        .catch(error => {
-            res.status(500).json({
-                error: error
-            });
-        })
+const router = express.Router();
 
 
-        
-    })
-    .catch(error => {
-        res.status(500).json({
-            error: error
+
+router.post('/create', authenticate, async (req, res, next) => {
+    try {
+        const { userId } = req.user;
+        const { seller, buyer, buyerAddress, orderDate, product,
+            paymentType } = req.body;
+
+        const createdOrder = await Order.create({
+            seller,
+            buyer,
+            product,
+            orderId: uuidV4(),
+            buyerAddress,
+            orderDate,
+            paymentType,
         });
-    })
-})
 
-router.get('/getorders/:userId', (req, res, next) => {
-
-    const userId = req.params.userId;
-    Order.find({"user": userId})
-    .select('address order orderDate paymentType paymentStatus isOrderCompleted')
-    .populate('order.product', 'name productPic')
-    .exec()
-    .then(orders => {
-
-        UserAddress.findOne({"user": userId})
-        .exec()
-        .then(userAddress => {
-
-            const orderWithAddress = orders.map(order => {
-                const address = userAddress.address.find(userAdd => order.address.equals(userAdd._id));
-                return {
-                    _id: order._id,
-                    order: order.order,
-                    address: address,
-                    orderDate: order.orderDate,
-                    paymentType: order.paymentType,
-                    paymentStatus: order.paymentStatus,
-                    isOrderComleted: order.isOrderComleted
-                }
-            });
-
-            res.status(200).json({
-                message: orderWithAddress
-            });
-
+        const order = await Order.findOne({ _id: createdOrder._id });
+        const getBuyer = await User.findOne({ _id: buyer }).select({
+            "__v": 0,
+            "password": 0,
+            "createdAt": 0
         })
-        .catch(error => {
-            return res.status(500).json({
-                error: error
-            })
-        })
-
-        
-    })
-    .catch(error => {
-        res.status(500).json({
-            error: error
-        });
-    });
-
+        const getProduct = await Product.findOne({ _id: product }).populate("productPic");
+        order.product = getProduct;
+        order.buyer = getBuyer;
+        res.status(200).json({ order })
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ err })
+    }
 });
+
+router.get("/get-orders/:userType/:userId", authenticate, async (req, res) => {
+    try {
+        const { userId, userType } = req.params;
+
+        if (userType === "seller" || userType === "buyer") {
+            const query = userType === "seller" ? { seller: userId } : { buyer: userId }
+
+            const orders = await Order.find(query).populate({
+                path: "product",
+                select: { "price": 1, "name": 1 }
+            });
+
+
+            return res.status(200).json({ totalOrders: orders.length, orders })
+        } else {
+            return res.status('403').json({ err: "wrong user type" });
+        }
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ err })
+
+    }
+});
+
+router.patch("/update-status/:orderId/:status", authenticate, async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { orderId, status } = req.params
+
+
+        console.log(userId, orderId)
+
+        const order = await Order.findOne({ orderId, seller: userId }).populate({
+            path: "product",
+            select: { "price": 1, "name": 1 }
+        });
+
+        if (!order) return res.status(404, "Order is not available");
+
+        const updatedOrder = {
+            ...order._doc,
+            orderStatus: status
+        }
+
+        await order.updateOne({ orderStatus: status });
+
+        res.status(200).json({ _id: order._id, order: updatedOrder })
+
+    } catch (err) {
+        return res.status(500).json({ err })
+    }
+})
 
 module.exports = router;

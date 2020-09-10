@@ -23,7 +23,7 @@ const productSchema = mongoose.Schema({
         }
     ],
     keyword: { type: String },
-    category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+    category: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
     updatedAt: Date,

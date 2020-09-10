@@ -23,7 +23,7 @@ router.post('/create', authenticate, async (req, res, next) => {
             description: req.body.description,
             productPic: req.body.productPic,
             keyword: req.body.keyword,
-            // category: req.body.category,
+            category: req.body.category,
             createdBy: userId
         });
 

@@ -144,14 +144,14 @@ router.post('/login', (req, res, next) => {
 });
 
 router.post('/new-address', authenticate, (req, res, next) => {
-
-    UserAddress.findOne({ "user": req.body.userId })
+    const { userId } = req.user;
+    UserAddress.findOne({ "user": userId })
         .exec()
         .then(user => {
 
             if (user) {
 
-                UserAddress.findOneAndUpdate({ "user": req.body.userId }, {
+                UserAddress.findOneAndUpdate({ "user": userId }, {
                     $push: {
                         "address": req.body.address
                     }
@@ -168,7 +168,7 @@ router.post('/new-address', authenticate, (req, res, next) => {
 
                 const userAddress = new UserAddress({
                     _id: new mongoose.Types.ObjectId(),
-                    user: req.body.userId,
+                    user: userId,
                     address: req.body.address
                 });
 

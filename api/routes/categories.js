@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 
 const Category = require('../models/category');
+const authenticate = require('../middleware/authenticate');
 
 
 categoryTree = (parentId = "", docs) => {
@@ -10,7 +11,7 @@ categoryTree = (parentId = "", docs) => {
 
 
     var categories = [];
-    for(var cat of category){
+    for (var cat of category) {
         categories.push({
             _id: cat._id,
             name: cat.name,
@@ -26,24 +27,26 @@ categoryTree = (parentId = "", docs) => {
 router.get('/', (req, res, next) => {
 
     Category.find({})
-    .exec()
-    .then(docs => {
-        
-        const categories = categoryTree('', docs);
+        .exec()
+        .then(docs => {
 
-        res.status(201).json({
-            message: categories
-        });
-    })
-    .catch(er => {
-        res.status(500).json({
-            error: er
+            const categories = categoryTree('', docs);
+
+            res.status(201).json({
+                message: categories
+            });
         })
-    });
+        .catch(er => {
+            res.status(500).json({
+                error: er
+            })
+        });
 
 });
 
-router.post('/', (req, res, next) => {
+router.post('/', authenticate, (req, res, next) => {
+
+    const { userId } = req.user;
 
     const category = new Category({
         _id: new mongoose.Types.ObjectId(),
@@ -51,20 +54,20 @@ router.post('/', (req, res, next) => {
         slug: req.body.slug,
         parent: req.body.parent,
         createdAt: new Date(),
-        createdBy: req.body.createdBy
+        createdBy: userId
     });
 
     category.save()
-    .then(doc => {
-        res.status(201).json({
-            message: doc
-        });
-    })
-    .catch(er => {
-        res.status(500).json({
-            error: er
+        .then(doc => {
+            res.status(201).json({
+                message: doc
+            });
         })
-    });
+        .catch(er => {
+            res.status(500).json({
+                error: er
+            })
+        });
 
 });
 
