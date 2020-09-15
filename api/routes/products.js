@@ -141,6 +141,41 @@ router.get("/single-product/:productId", authenticate, async (req, res) => {
     }
 })
 
+router.get("/get-product/:productId", async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const product = await Product.findOne({ _id: productId }).populate("productPic");
+        if (!product) return res.status(404).json({ err: "product not found" });
+
+        res.status(200).json({ product })
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ err })
+    }
+})
+
+router.post("/search", async (req, res) => {
+    try {
+        const { searchQuery } = req.body;
+
+        // make array from string and remove duplication
+        const queries = [... new Set(searchQuery.split(" "))];
+        console.log(queries)
+
+        let productsArray = []
+        for (let query of queries) {
+            const products = await Product.find({
+                "name": { "$regex": query, "$options": "i" }
+            }).populate("productPic")
+            productsArray = [...productsArray, ...products]
+        }
+
+        res.status(200).json({ productsLength: productsArray.length, products: productsArray })
+    } catch (err) {
+        res.status(500).json({ err })
+    }
+})
+
 router.get('/', (req, res, next) => {
 
     Product.find({})
@@ -161,80 +196,16 @@ router.get('/', (req, res, next) => {
 
 
 
-router.get('/:categorySlug', (req, res, next) => {
+router.get('/:categorySlug', async (req, res, next) => {
+    try {
+        const { categorySlug } = req.params;
+        const findProduct = await Product.find({ category: categorySlug }).populate("productPic");
 
-    let filter = {};
-    if (req.query.hasOwnProperty("filter")) {
-        filter['price'] = req.query.price
+        res.status(200).json({ products: findProduct })
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ err })
     }
-
-    const slug = req.params.categorySlug;
-    Category.findOne({ slug: slug })
-        .select('_id parent')
-        .exec()
-        .then(category => {
-            if (category) {
-
-                if (category.parent === "") {
-                    //its a parent category
-                    //Now find Chidrens
-                    Category.find({ "parent": category._id })
-                        .select('_id name')
-                        .exec()
-                        .then(categories => {
-                            const categoriesAr = categories.map(category => category._id);
-
-                            Product.find({ "category": { $in: categoriesAr } })
-                                .select('_id name price productPic category slug')
-                                .sort(filter)
-                                .exec()
-                                .then(products => {
-                                    res.status(200).json({
-                                        message: products
-                                    })
-                                })
-                                .catch(error => {
-                                    res.status(500).json({
-                                        error: error
-                                    })
-                                })
-
-
-                        })
-                        .catch(error => {
-
-                        })
-
-                } else {
-                    Product.find({ category: category._id })
-                        .select('_id name price productPic category slug')
-                        .sort(filter)
-                        .exec()
-                        .then(products => {
-                            res.status(200).json({
-                                message: products
-                            })
-                        })
-                        .catch(error => {
-                            return res.status(404).json({
-                                message: error
-                            })
-                        })
-                }
-
-
-
-            } else {
-                return res.status(404).json({
-                    message: 'Not Found'
-                })
-            }
-        })
-        .catch(er => {
-            res.status(500).json({
-                error: er
-            });
-        });
 });
 
 router.get('/:categorySlug/:productSlug', (req, res, next) => {
