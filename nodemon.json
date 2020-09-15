@@ -1,7 +1,7 @@
 {
     "env": {
-        "MONGODB_USERNAME": "Tayyab30",
-        "MONGODB_PASSWORD": "1234",
+        "MONGODB_USERNAME": "",
+        "MONGODB_PASSWORD": "",
         "MAIL": "",
         "PASS": ""
     }
