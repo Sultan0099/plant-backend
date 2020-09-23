@@ -3,6 +3,8 @@ const express = require('express');
 const Order = require('../models/order');
 const Product = require('../models/product');
 const User = require('../models/user');
+const CartItem = require('../models/cartItem');
+
 const authenticate = require('../middleware/authenticate');
 
 const { v4: uuidV4 } = require('uuid');
@@ -13,17 +15,18 @@ const router = express.Router();
 
 router.post('/create', authenticate, async (req, res, next) => {
     try {
-        const { userId } = req.user;
-        const { seller, buyer, buyerAddress, orderDate, product,
-            paymentType } = req.body;
+
+        const { buyer, buyerAddress, product, paymentType } = req.body;
+        const getProduct = await Product.findOne({ _id: product }).populate("productPic");
+
+        if (!getProduct) return res.status(404).json({ err: "Product not found" })
 
         const createdOrder = await Order.create({
-            seller,
+            seller: getProduct.createdBy,
             buyer,
             product,
             orderId: uuidV4(),
             buyerAddress,
-            orderDate,
             paymentType,
         });
 
@@ -33,9 +36,18 @@ router.post('/create', authenticate, async (req, res, next) => {
             "password": 0,
             "createdAt": 0
         })
-        const getProduct = await Product.findOne({ _id: product }).populate("productPic");
+
         order.product = getProduct;
         order.buyer = getBuyer;
+
+        const cartItems = await CartItem.findOne({ user: buyer });
+
+        const filterCartItems = cartItems.cart.filter(item => item.product === product);
+
+        cartItems.cart = filterCartItems;
+
+        await cartItems.updateOne(cartItems);
+
         res.status(200).json({ order })
     } catch (err) {
         console.log(err);
