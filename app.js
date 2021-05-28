@@ -1,3 +1,7 @@
+// importing packages
+
+// Using express.js framework
+// Installing packages command 'npm install package-name'
 const express = require('express');
 const app = express();
 const mongoose = require('mongoose');
@@ -6,12 +10,17 @@ const cors = require('cors');
 const path = require('path');
 const authenticate = require('./api/middleware/authenticate');
 
-const MONGO_URI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@cluster0.aikar.mongodb.net/mystore?retryWrites=true&w=majority`;
+// Adding database mongodb
+// ORM Mongoose
+const MONGO_URI = `mongodb+srv://admin:DJhJohXj2qF6eKZ7@cluster0.rwarx.mongodb.net/plant?retryWrites=true&w=majority`;
 
-mongoose.connect('mongodb://localhost:27017/plantApp', { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false })
     .then(() => console.log("database connected"))
     .catch(err => console.error("database error", err));
 
+
+// Importing Routes
+// Routes methods GET, POST, PUT, PATCH, DELETE
 const adminRoutes = require('./api/routes/admins');
 const categoryRoutes = require('./api/routes/categories');
 const userRoutes = require('./api/routes/users');
@@ -25,6 +34,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
 console.log(path.join(__dirname, "uploads"))
 
+// Using Routes in Middlware 
 app.use("/uploads", express.static(path.join(__dirname, 'uploads')));
 app.use('/admin', adminRoutes);
 app.use('/category', categoryRoutes);
