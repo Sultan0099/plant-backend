@@ -63,7 +63,7 @@ router.post("/upload-img", authenticate, upload.array('product-img', 5), async (
             const image = await Image.create({
                 mimeType: file.mimetype,
                 originalName: file.originalname,
-                path: `http://localhost:2019/uploads/${file.filename}`
+                path: `http://https://glacial-bayou-56103.herokuapp.com/uploads/${file.filename}`
             })
 
             doneSave += 1;
