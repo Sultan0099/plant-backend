@@ -9,6 +9,7 @@ const morgan = require("morgan");
 const cors = require('cors');
 const path = require('path');
 const authenticate = require('./api/middleware/authenticate');
+require('./config/cloudinary');
 
 // Adding database mongodb
 // ORM Mongoose

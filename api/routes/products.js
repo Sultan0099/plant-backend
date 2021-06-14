@@ -8,6 +8,8 @@ const Image = require('../models/images');
 
 const authenticate = require('../middleware/authenticate');
 const upload = require('../../config/multer');
+const { streamUpload, cloudinary } = require('../../config/cloudinary');
+
 
 router.post('/create', authenticate, async (req, res, next) => {
     try {
@@ -53,28 +55,22 @@ router.get('/me', authenticate, async (req, res) => {
     }
 })
 
-router.post("/upload-img", authenticate, upload.array('product-img', 5), async (req, res) => {
+// upload.single('product-img'),
+
+router.post("/upload-img",  async (req, res) => {
     try {
-        const files = req.files;
-        if (req.files.length === 0) return res.status(400).json({ err: "no image has selected" });
-        let doneSave = 0, images = [];
 
-        for (let file of files) {
-            const image = await Image.create({
-                mimeType: file.mimetype,
-                originalName: file.originalname,
-                path: `https://glacial-bayou-56103.herokuapp.com/uploads/${file.filename}`
-            })
+        console.log('req body', req.body)
+        const uploadResponse = await cloudinary.uploader.upload(req.body.data, {upload_preset:  'ml_default'})
+        console.log('uploadResponse', uploadResponse )
 
-            doneSave += 1;
-            images.push(image);
-        }
+        const image = await Image.create({
+            mimeType: uploadResponse.resource_type,
+            originalName: uploadResponse.etag,
+            path: uploadResponse.secure_url
+        })
 
-        if (files.length === doneSave) {
-            console.log(images)
-            res.status(200).json({ images })
-        }
-
+        res.json({ images: [ image ]})
     } catch (err) {
         console.log(err);
         res.status(500).json({ err })
